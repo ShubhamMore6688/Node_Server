@@ -74,7 +74,8 @@ jobs:
 
       - name: Update .env File in node_server
         run: |
-          Set-Content -Path "C:\Users\shubh\Desktop\Node_Server\.env" -Value "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}`nIMAGE_TAG=$env:IMAGE_TAG"
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> C:\Users\shubh\Desktop\Node_Server\.env
+          ((Get-Content C:\Users\shubh\Desktop\Node_Server\.env) -replace "IMAGE_TAG=.*", "IMAGE_TAG=$env:IMAGE_TAG") | Set-Content C:\Users\shubh\Desktop\Node_Server\.env
         shell: powershell
 
       - name: Restart Application in node_server
