@@ -74,12 +74,12 @@ jobs:
 
       - name: Update .env File in node_server
         run: |
-          Set-Content -Path "C:\Users\YourUser\Desktop\node_server\.env" -Value "IMAGE_TAG=$env:IMAGE_TAG"
+          Set-Content -Path "C:\Users\shubh\Desktop\Node_Server\.env" -Value "IMAGE_TAG=$env:IMAGE_TAG"
         shell: powershell
 
       - name: Restart Application in node_server
         run: |
-          cd C:\Users\YourUser\Desktop\node_server
+          cd C:\Users\shubh\Desktop\Node_Server
           docker-compose down
           docker-compose up -d
         shell: powershell
