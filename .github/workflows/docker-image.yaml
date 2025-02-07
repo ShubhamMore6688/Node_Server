@@ -74,6 +74,9 @@ jobs:
 
       - name: Update .env File in node_server
         run: |
+          # Clean and update .env file
+          Get-Content C:\Users\shubh\Desktop\Node_Server\.env | Out-File -Encoding ASCII C:\Users\shubh\Desktop\Node_Server\.env
+          
           echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> C:\Users\shubh\Desktop\Node_Server\.env
           ((Get-Content C:\Users\shubh\Desktop\Node_Server\.env) -replace "IMAGE_TAG=.*", "IMAGE_TAG=$env:IMAGE_TAG") | Set-Content C:\Users\shubh\Desktop\Node_Server\.env
         shell: powershell
