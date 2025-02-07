@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${DOCKERHUB_USERNAME}/node-app:${IMAGE_TAG}
+    ports:
+      - 3000:3000
+    env_file:
+      - .env
