@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Deploy Node App
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
           $timestamp = Get-Date -Format "yyyyMMddHHmmss"
           $commitSha = "${{ github.sha }}".Substring(0,7)
           "IMAGE_TAG=$timestamp-$commitSha" | Out-File -FilePath $env:GITHUB_ENV -Append
-        shell: powershell  # 👈 Use 'powershell' instead of 'pwsh'
+        shell: powershell
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
@@ -32,20 +32,54 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-app:$env:IMAGE_TAG .
-        shell: powershell  # 👈 Use 'powershell' instead of 'pwsh'
+        shell: powershell
 
       - name: Push Docker Image to DockerHub
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/node-app:$env:IMAGE_TAG
-        shell: powershell  # 👈 Use 'powershell' instead of 'pwsh'
+        shell: powershell
 
       - name: Upload image tag to artifact
         run: |
           echo $env:IMAGE_TAG | Out-File -FilePath image-tag.txt
-        shell: powershell  # 👈 Use 'powershell' instead of 'pwsh'
+        shell: powershell
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: image-tag
           path: image-tag.txt
+
+  deploy:
+    name: Deploy on Windows Server
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      - name: Download Image Tag
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tag
+
+      - name: Read Image Tag
+        run: |
+          $IMAGE_TAG = Get-Content image-tag.txt
+          "IMAGE_TAG=$IMAGE_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: powershell
+
+      - name: Pull Latest Docker Image
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/node-app:$env:IMAGE_TAG
+        shell: powershell
+
+      - name: Update .env File in node_server
+        run: |
+          Set-Content -Path "C:\Users\YourUser\Desktop\node_server\.env" -Value "IMAGE_TAG=$env:IMAGE_TAG"
+        shell: powershell
+
+      - name: Restart Application in node_server
+        run: |
+          cd C:\Users\YourUser\Desktop\node_server
+          docker-compose down
+          docker-compose up -d
+        shell: powershell
