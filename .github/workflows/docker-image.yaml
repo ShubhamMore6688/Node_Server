@@ -20,7 +20,7 @@ jobs:
         run: |
           $timestamp = Get-Date -Format "yyyyMMddHHmmss"
           $commitSha = "${{ github.sha }}".Substring(0,7)
-          "IMAGE_TAG=$timestamp-$commitSha" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "IMAGE_TAG=$timestamp-$commitSha" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: powershell
 
       - name: Log in to DockerHub
@@ -63,8 +63,8 @@ jobs:
 
       - name: Read Image Tag
         run: |
-          $IMAGE_TAG = Get-Content image-tag.txt
-          "IMAGE_TAG=$IMAGE_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $IMAGE_TAG = Get-Content image-tag.txt | Out-String
+          echo "IMAGE_TAG=$IMAGE_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: powershell
 
       - name: Pull Latest Docker Image
@@ -74,12 +74,12 @@ jobs:
 
       - name: Update .env File in node_server
         run: |
-          Set-Content -Path "C:\Users\shubh\Desktop\Node_Server\.env" -Value "IMAGE_TAG=$env:IMAGE_TAG"
+          Set-Content -Path "C:\Users\shubh\Desktop\Node_Server\.env" -Value "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}`nIMAGE_TAG=$env:IMAGE_TAG"
         shell: powershell
 
       - name: Restart Application in node_server
         run: |
           cd C:\Users\shubh\Desktop\Node_Server
           docker-compose down
-          docker-compose up -d
+          docker-compose up -d --remove-orphans
         shell: powershell
