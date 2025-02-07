@@ -7,7 +7,7 @@ const app = express();
 
 app.get('/', (req, res) => {
     res.json({
-        message: 'new updated'
+        message: 'hello update'
     })
 });
 
