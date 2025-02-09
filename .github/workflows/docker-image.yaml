@@ -9,12 +9,29 @@ on:
       - master
 
 jobs:
-  build-and-push:
+  build-and-analyze:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
       
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run SonarQube Analysis
+        run: |
+          npm install -g sonarqube-scanner
+          sonar-scanner \
+            -Dsonar.projectKey=node-app \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
@@ -26,10 +43,9 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
        
-
   deploy:
     name: Deploy on Windows Server
-    needs: build-and-push
+    needs: build-and-analyze
     runs-on: self-hosted
 
     steps:
@@ -37,7 +53,6 @@ jobs:
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
         shell: powershell
-
 
       - name: Restart Application in node_server
         run: |
