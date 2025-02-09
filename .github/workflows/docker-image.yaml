@@ -30,7 +30,7 @@ jobs:
             -Dsonar.projectKey=node-app \
             -Dsonar.sources=. \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
