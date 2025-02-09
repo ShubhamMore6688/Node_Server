@@ -52,6 +52,18 @@ jobs:
       - name: Run Trivy Image Scan
         run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest --exit-code 0 --no-progress --format table | tee trivy-image-report.txt
 
+      - name: Upload Trivy File System Scan Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs-report.txt
+
+      - name: Upload Trivy Image Scan Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report
+          path: trivy-image-report.txt
+
   deploy:
     name: Deploy on Windows Server
     needs: build-and-scan
