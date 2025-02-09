@@ -14,6 +14,14 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+      
+      - name: Run SonarQube Analysis
+        run: |
+          sonar-scanner \
+          -Dsonar.projectKey=node-app \
+          -Dsonar.projectName=node-app \
+          -Dsonar.host.url=${{ secrets.SONAR_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
