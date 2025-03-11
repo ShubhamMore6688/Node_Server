@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
           body: "${{ github.job }} job in workflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}"
-          to: shubhamdmore03@gmail.com  # Dynamic email of the repo owner or committer
-          from: XYZ
+          to: shubhamdmore68@gmail.com  # Dynamic email of the repo owner or committer
+          
 
     
