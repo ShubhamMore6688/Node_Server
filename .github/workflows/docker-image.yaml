@@ -34,22 +34,35 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
           body: |
-            Dear Team,
-
-            This is to inform you that the GitHub Actions workflow **${{ github.workflow }}** for the repository **${{ github.repository }}** has **${{ job.status }}**.
+            <html>
+              <body>
+                <p>Dear Team,</p>
+                <p>This is to inform you that the GitHub Actions workflow <b>${{ github.workflow }}</b> 
+                   for the repository <b>${{ github.repository }}</b> has 
+                   <b style="color:${{ job.status == 'success' && 'green' || 'red' }};">${{ job.status }}</b>.
+                </p>
       
-            **Details:**
-            - **Job Name:** ${{ github.job }}
-            - **Branch:** ${{ github.ref }}
-            - **Committer:** ${{ github.actor }}
-            - **Commit Message:** ${{ github.event.head_commit.message }}
-            - **Run ID:** [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+                <h3>Details:</h3>
+                <ul>
+                  <li><b>Job Name:</b> ${{ github.job }}</li>
+                  <li><b>Branch:</b> ${{ github.ref }}</li>
+                  <li><b>Committer:</b> ${{ github.actor }}</li>
+                  <li><b>Commit Message:</b> ${{ github.event.head_commit.message }}</li>
+                  <li><b>Run ID:</b> 
+                    <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+                       target="_blank">
+                       View Workflow Run
+                    </a>
+                  </li>
+                </ul>
       
-            Please review the above details and take appropriate action if needed.
+                <p>Please review the above details and take appropriate action if needed.</p>
       
-            Best Regards,  
-            **GitHub Actions Bot**  
-            _Automated Notification System_
+                <p>Best Regards,<br>
+                <b>GitHub Actions Bot</b><br>
+                <i>Automated Notification System</i></p>
+              </body>
+            </html>
           to: shubhamdmore68@gmail.com  # Dynamic email of the repo owner or committer
           from: Shubham More
 
