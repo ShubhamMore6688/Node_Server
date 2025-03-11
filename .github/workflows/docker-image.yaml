@@ -33,7 +33,23 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
-          body: "${{ github.job }} job in workflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}"
+          body: |
+            Dear Team,
+
+            This is to inform you that the GitHub Actions workflow **${{ github.workflow }}** for the repository **${{ github.repository }}** has **${{ job.status }}**.
+      
+            **Details:**
+            - **Job Name:** ${{ github.job }}
+            - **Branch:** ${{ github.ref }}
+            - **Committer:** ${{ github.actor }}
+            - **Commit Message:** ${{ github.event.head_commit.message }}
+            - **Run ID:** [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+      
+            Please review the above details and take appropriate action if needed.
+      
+            Best Regards,  
+            **GitHub Actions Bot**  
+            _Automated Notification System_
           to: shubhamdmore68@gmail.com  # Dynamic email of the repo owner or committer
           from: Shubham More
 
