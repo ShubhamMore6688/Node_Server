@@ -33,6 +33,7 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
+          content_type: text/html
           body: |
             <html>
               <body>
