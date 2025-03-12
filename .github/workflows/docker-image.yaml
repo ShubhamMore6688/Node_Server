@@ -64,7 +64,7 @@ jobs:
                 <i>Automated Notification System</i></p>
               </body>
             </html>
-          to: shubhamdmore68@gmail.com  # Dynamic email of the repo owner or committer
+          to: shubham@swayatt.com  # Dynamic email of the repo owner or committer
           from: Shubham More
 
     
