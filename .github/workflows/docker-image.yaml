@@ -24,47 +24,10 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Send mail
-        if: success() # Notify for both success and failure
-        uses: dawidd6/action-send-mail@v2
+      - name: Notify via Email
+        uses: canastro/actions-email@v1
         with:
-          server_address: smtppro.zoho.in
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
-          content_type: text/html
-          body: |
-            <html>
-              <body>
-                <p>Dear Team,</p>
-                <p>This is to inform you that the GitHub Actions workflow <b>${{ github.workflow }}</b> 
-                   for the repository <b>${{ github.repository }}</b> has 
-                   <b style="color:${{ job.status == 'success' && 'green' || 'red' }};">${{ job.status }}</b>.
-                </p>
-      
-                <h3>Details:</h3>
-                <ul>
-                  <li><b>Job Name:</b> ${{ github.job }}</li>
-                  <li><b>Branch:</b> ${{ github.ref }}</li>
-                  <li><b>Committer:</b> ${{ github.actor }}</li>
-                  <li><b>Commit Message:</b> ${{ github.event.head_commit.message }}</li>
-                  <li><b>Run ID:</b> 
-                    <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
-                       target="_blank">
-                       View Workflow Run
-                    </a>
-                  </li>
-                </ul>
-      
-                <p>Please review the above details and take appropriate action if needed.</p>
-      
-                <p>Best Regards,<br>
-                <b>GitHub Actions Bot</b><br>
-                <i>Automated Notification System</i></p>
-              </body>
-            </html>
-          to: shubham@swayatt.com  # Dynamic email of the repo owner or committer
-          from: Shubham More
-
-    
+          to: "shubhamdmore03@gmail.com"
+          subject: "GitHub Action Alert"
+          body: "The workflow for `${{ github.repository }}` has finished with status `${{ job.status }}`"
+          token: ${{ secrets.GITHUB_TOKEN }}
