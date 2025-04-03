@@ -1,29 +1,90 @@
-name: Build and Deploy Node 
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - master
+      - master # Trigger pipeline on push to the 'main' branch
   pull_request:
     branches:
-      - master
+      - master  # Trigger on PR to the 'main' branch
 
 jobs:
-  build-and-scan:
-    runs-on: ubuntu-latest  # Changed from self-hosted Windows to Ubuntu
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v3
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm install
 
+      
+
+      - name: Build and Push Docker Image
+        run: |
+           docker build -t myimage .
+           docker push myimage
+        shell: bash
+
+ 
+  deploy:
+    name: Deploy on GCE VM
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Set up SSH Key to access GCE VM
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.GCE_IP }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      # SSH into GCE VM and deploy
+      - name: SSH into GCE VM & Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.GCE_USER }}@${{ secrets.GCE_IP }} << 'EOF'
+
+            # Add the user to the Docker group
+            sudo usermod -aG docker $USER
+  
+            # Ensure that Docker daemon is running (if not already)
+            sudo systemctl start docker
+            newgrp docker
+
+            
+           
+            sudo su - shubham -c "
+              cd /home/shubham &&
+              docker pull asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/website/website:latest &&
+              docker-compose down &&
+              docker-compose up -d --remove-orphans
+            "
+
+          EOF
+        shell: bash
+
+  send_mail:
+    name: Send mail
+    needs: [build, deploy]
+    if: always()  # Send mail on success and failure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine Workflow Status
+        run: |
+          if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.deploy.result }}" == "failure" ]; then
+            echo "PIPELINE_STATUS=failed" >> $GITHUB_ENV
+          else
+            echo "PIPELINE_STATUS=success" >> $GITHUB_ENV
+          fi
+        shell: bash
+        
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v2
         with:
@@ -31,20 +92,21 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
+          subject: "CI/CD Pipeline ${{ env.PIPELINE_STATUS }} for ${{ github.repository }}"
           content_type: text/html
           body: |
             <html>
               <body>
                 <p>Dear Team,</p>
-                <p>This is to inform you that the GitHub Actions workflow <b>${{ github.workflow }}</b> 
+                <p>The GitHub Actions workflow <b>${{ github.workflow }}</b> 
                    for the repository <b>${{ github.repository }}</b> has 
-                   <b style="color:${{ job.status == 'success' && 'green' || 'red' }};">${{ job.status }}</b>.
+                   <b style="color:${{ env.PIPELINE_STATUS == 'success' && 'green' || 'red' }};">${{ env.PIPELINE_STATUS }}</b>.
                 </p>
       
                 <h3>Details:</h3>
                 <ul>
-                  <li><b>Job Name:</b> ${{ github.job }}</li>
+                  <li><b>Build Status:</b> ${{ needs.build.result }}</li>
+                  <li><b>Deploy Status:</b> ${{ needs.deploy.result }}</li>
                   <li><b>Branch:</b> ${{ github.ref }}</li>
                   <li><b>Committer:</b> ${{ github.actor }}</li>
                   <li><b>Commit Message:</b> ${{ github.event.head_commit.message }}</li>
@@ -63,5 +125,5 @@ jobs:
                 <i>Automated Notification System</i></p>
               </body>
             </html>
-          to: "${{ secrets.NOTIFY_EMAIL }}, ${{ secrets.NOTIFY_EMAIL_2 }}"
+          to: ${{ secrets.NOTIFY_EMAIL }}
           from: "Shubham More"
