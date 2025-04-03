@@ -125,5 +125,5 @@ jobs:
                 <i>Automated Notification System</i></p>
               </body>
             </html>
-          to: ${{ secrets.NOTIFY_EMAIL }}
+          to: ${{ secrets.NOTIFY_EMAIL }}, ${{ secrets.NOTIFY_EMAIL_2 }}
           from: "Shubham More"
