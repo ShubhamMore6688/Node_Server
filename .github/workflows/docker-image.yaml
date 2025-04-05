@@ -21,7 +21,20 @@ jobs:
         run: |
           npm install
 
-      
+      - name: Run OWASP Dependency-Check
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/src \
+            owasp/dependency-check \
+            --scan /src \
+            --format HTML \
+            --out /src/reports
+
+      - name: Upload OWASP Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check-report
+          path: reports/dependency-check-report.html
 
       - name: Build and Push Docker Image
         run: |
