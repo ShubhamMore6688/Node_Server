@@ -20,18 +20,22 @@ jobs:
         run: |
           npm install
 
+      - name: Set up Docker volume for cache
+        run: mkdir -p ${{ github.workspace }}/odc_data
+
       - name: Run OWASP Dependency-Check
         run: |
-          mkdir -p reports
           docker run --rm \
             -v ${{ github.workspace }}:/src \
-            owasp/dependency-check \
+            -v ${{ github.workspace }}/odc_data:/usr/share/dependency-check/data \
+            owasp/dependency-check:8.4.2 \
             --scan /src \
             --format HTML \
-            --out /src/reports
+            --out /src/reports \
+            
 
-      - name: Upload OWASP Report
-        uses: actions/upload-artifact@v4
+      - name: Upload Dependency-Check Report
+        uses: actions/upload-artifact@v3
         with:
           name: dependency-check-report
           path: reports/dependency-check-report.html
