@@ -32,6 +32,7 @@ jobs:
           image-ref: 'myimage:latest'
           format: 'table'
           output: 'trivy-image-report.txt'
+          severity: 'HIGH,CRITICAL'
           exit-code: '0'
           ignore-unfixed: true
 
