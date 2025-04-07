@@ -20,115 +20,111 @@ jobs:
         run: |
           npm install
 
-      - name: Set up Docker volume for cache
-        run: mkdir -p ${{ github.workspace }}/odc_data
-
-      - name: Run OWASP Dependency-Check
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/src \
-            -v ${{ github.workspace }}/odc_data:/usr/share/dependency-check/data \
-            owasp/dependency-check:8.4.2 \
-            --scan /src \
-            --format HTML \
-            --out /src/reports \
-            
-
-      - name: Upload Dependency-Check Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: reports/dependency-check-report.html
-
       - name: Build and Push Docker Image
         run: |
           docker build -t myimage .
           docker push myimage
         shell: bash
 
-  deploy:
-    name: Deploy on GCE VM
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Set up SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.GCE_IP }} >> ~/.ssh/known_hosts
-        shell: bash
-
-      - name: SSH into GCE VM & Deploy
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.GCE_USER }}@${{ secrets.GCE_IP }} << 'EOF'
-
-            sudo usermod -aG docker $USER
-            sudo systemctl start docker
-            newgrp docker
-
-            sudo su - shubham -c "
-              cd /home/shubham &&
-              docker pull asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/website/website:latest &&
-              docker-compose down &&
-              docker-compose up -d --remove-orphans
-            "
-          EOF
-        shell: bash
-
-  send_mail:
-    name: Send mail
-    needs: [build, deploy]
-    if: always()
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Determine Workflow Status
-        run: |
-          if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.deploy.result }}" == "failure" ]; then
-            echo "PIPELINE_STATUS=failed" >> $GITHUB_ENV
-          else
-            echo "PIPELINE_STATUS=success" >> $GITHUB_ENV
-          fi
-        shell: bash
-
-      - name: Send Email Notification
-        uses: dawidd6/action-send-mail@v2
+      - name: Run Trivy scan on Docker image
+        uses: aquasecurity/trivy-action@master
         with:
-          server_address: smtp.zoho.in
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "CI/CD Pipeline ${{ env.PIPELINE_STATUS }} for ${{ github.repository }}"
-          content_type: text/html
-          body: |
-            <html>
-              <body>
-                <p>Dear Team,</p>
-                <p>The GitHub Actions workflow <b>${{ github.workflow }}</b> 
-                   for the repository <b>${{ github.repository }}</b> has 
-                   <b style="color:${{ env.PIPELINE_STATUS == 'success' && 'green' || 'red' }};">${{ env.PIPELINE_STATUS }}</b>.
-                </p>
-                <h3>Details:</h3>
-                <ul>
-                  <li><b>Build Status:</b> ${{ needs.build.result }}</li>
-                  <li><b>Deploy Status:</b> ${{ needs.deploy.result }}</li>
-                  <li><b>Branch:</b> ${{ github.ref }}</li>
-                  <li><b>Committer:</b> ${{ github.actor }}</li>
-                  <li><b>Commit Message:</b> ${{ github.event.head_commit.message }}</li>
-                  <li><b>Run ID:</b> 
-                    <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
-                       target="_blank">
-                       View Workflow Run
-                    </a>
-                  </li>
-                </ul>
-                <p>Please review the above details and take appropriate action if needed.</p>
-                <p>Best Regards,<br>
-                <b>GitHub Actions Bot</b><br>
-                <i>Automated Notification System</i></p>
-              </body>
-            </html>
-          to: ${{ secrets.NOTIFY_EMAIL }}, ${{ secrets.NOTIFY_EMAIL_2 }}
-          from: "Shubham More"
+          image-ref: 'my-image:latest'
+          format: 'table'
+          output: 'trivy-image-report.txt'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      # 📦 Upload the Trivy Image Report as artifact
+      - name: Upload Trivy Image Scan Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report
+          path: trivy-image-report.txt
+
+  # deploy:
+  #   name: Deploy on GCE VM
+  #   needs: build
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Set up SSH Key
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+  #         chmod 600 ~/.ssh/id_rsa
+  #         ssh-keyscan -H ${{ secrets.GCE_IP }} >> ~/.ssh/known_hosts
+  #       shell: bash
+
+  #     - name: SSH into GCE VM & Deploy
+  #       run: |
+  #         ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.GCE_USER }}@${{ secrets.GCE_IP }} << 'EOF'
+
+  #           sudo usermod -aG docker $USER
+  #           sudo systemctl start docker
+  #           newgrp docker
+
+  #           sudo su - shubham -c "
+  #             cd /home/shubham &&
+  #             docker pull asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/website/website:latest &&
+  #             docker-compose down &&
+  #             docker-compose up -d --remove-orphans
+  #           "
+  #         EOF
+  #       shell: bash
+
+  # send_mail:
+  #   name: Send mail
+  #   needs: [build, deploy]
+  #   if: always()
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Determine Workflow Status
+  #       run: |
+  #         if [ "${{ needs.build.result }}" == "failure" ] || [ "${{ needs.deploy.result }}" == "failure" ]; then
+  #           echo "PIPELINE_STATUS=failed" >> $GITHUB_ENV
+  #         else
+  #           echo "PIPELINE_STATUS=success" >> $GITHUB_ENV
+  #         fi
+  #       shell: bash
+
+  #     - name: Send Email Notification
+  #       uses: dawidd6/action-send-mail@v2
+  #       with:
+  #         server_address: smtp.zoho.in
+  #         server_port: 465
+  #         username: ${{ secrets.EMAIL_USERNAME }}
+  #         password: ${{ secrets.EMAIL_PASSWORD }}
+  #         subject: "CI/CD Pipeline ${{ env.PIPELINE_STATUS }} for ${{ github.repository }}"
+  #         content_type: text/html
+  #         body: |
+  #           <html>
+  #             <body>
+  #               <p>Dear Team,</p>
+  #               <p>The GitHub Actions workflow <b>${{ github.workflow }}</b> 
+  #                  for the repository <b>${{ github.repository }}</b> has 
+  #                  <b style="color:${{ env.PIPELINE_STATUS == 'success' && 'green' || 'red' }};">${{ env.PIPELINE_STATUS }}</b>.
+  #               </p>
+  #               <h3>Details:</h3>
+  #               <ul>
+  #                 <li><b>Build Status:</b> ${{ needs.build.result }}</li>
+  #                 <li><b>Deploy Status:</b> ${{ needs.deploy.result }}</li>
+  #                 <li><b>Branch:</b> ${{ github.ref }}</li>
+  #                 <li><b>Committer:</b> ${{ github.actor }}</li>
+  #                 <li><b>Commit Message:</b> ${{ github.event.head_commit.message }}</li>
+  #                 <li><b>Run ID:</b> 
+  #                   <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+  #                      target="_blank">
+  #                      View Workflow Run
+  #                   </a>
+  #                 </li>
+  #               </ul>
+  #               <p>Please review the above details and take appropriate action if needed.</p>
+  #               <p>Best Regards,<br>
+  #               <b>GitHub Actions Bot</b><br>
+  #               <i>Automated Notification System</i></p>
+  #             </body>
+  #           </html>
+  #         to: ${{ secrets.NOTIFY_EMAIL }}, ${{ secrets.NOTIFY_EMAIL_2 }}
+  #         from: "Shubham More"
