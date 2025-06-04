@@ -1,0 +1,35 @@
+name: CI/CD to Raspberry Pi
+
+on:
+  push:
+    branches:
+      - master  # or your deployment branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    
+
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.PI_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to Raspberry Pi
+      run: |
+        ssh -i ~/.ssh/id_rsa ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} << 'EOF'
+          docker pull ${{ secrets.DOCKER_IMAGE_NAME }}:latest
+          docker stop mycontainer || true
+          docker rm mycontainer || true
+          docker run -d --restart unless-stopped --name mycontainer -p 80:80 ${{ secrets.DOCKER_IMAGE_NAME }}:latest
+        EOF
